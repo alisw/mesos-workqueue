@@ -45,3 +45,6 @@ your browser on port 5050 of the IP provided by the command:
 
     docker-machine ip default
 
+You can start the framework by running:
+
+    mesos-workqueue-framework --master $(docker-machine ip default):5050 --catalog $(docker-machine ip default):9097
