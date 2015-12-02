@@ -1,0 +1,27 @@
+zookeeper:
+  image: alisw/zookeeper
+  net: host
+slave:
+  image: alisw/mesos-slave:0.24.0
+  net: host
+  pid: host
+  privileged: true
+  volumes:
+    - /sys/fs/cgroup:/sys/fs/cgroup
+    - /usr/local/bin/docker:/usr/bin/docker
+    - /var/run/docker.sock:/var/run/docker.sock
+  environment:
+    MESOS_IP: 192.168.99.100
+master:
+  image: alisw/mesos-master
+  net: host
+  environment:
+    MESOS_IP: 192.168.99.100
+catalog:
+  image: alisw/slc6-builder:latest
+  net: host
+  command: catalog_server --port=9097 --debug=all --update-host=do-not-send-updates --update-interval=30m --lifetime=80
+wqtestmaster:
+  image: alisw/slc6-builder:latest
+  net: host
+  command: bash -c "wget https://raw.githubusercontent.com/dberzano/cern-alice-setup/master/makeflow/launch_test_job.sh && sh -x ./launch_test_job.sh 30 -Twq -a -N alice-wq-generic -C localhost:9097 --debug=all && echo job done && cat results.txt"

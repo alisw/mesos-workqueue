@@ -1,4 +1,0 @@
-class WorkqueueScheduler {
-  WorkqueueScheduler() 
-  {}
-};
