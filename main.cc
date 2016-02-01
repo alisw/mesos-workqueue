@@ -2,12 +2,16 @@
 #include <signal.h>
 #include <getopt.h>
 #include "WorkqueueScheduler.h"
+#include <regex>
+#include <vector>
+#include <tuple>
 
 using namespace mesos;
 
-const char *USAGE = "Usage: workqueue-mesos-framework"  \
-                    " --master <url>"                   \
-                    " --docker <docker image>"          \
+const char *USAGE = "Usage: workqueue-mesos-framework"          \
+                    " --master <url>"                           \
+                    " --docker <docker image>"                  \
+                    " [--volume] <host path>:<container path>"  \
                     " --catalog <url>[:<port>]\n";
 
 MesosSchedulerDriver* schedulerDriver;
@@ -28,6 +32,15 @@ static void SIGINTHandler(int signum)
   exit(0);
 }
 
+std::vector<std::string> split(const std::string& input, const std::string& regex) {
+    // passing -1 as the submatch index parameter performs splitting
+    std::regex re(regex);
+    std::sregex_token_iterator
+        first{input.begin(), input.end(), re, -1},
+        last;
+    return {first, last};
+}
+
 const char *DEFAULT_WORKQUEUE_MESOS_CATALOG = "localhost:9097";
 const char *DEFAULT_WORKQUEUE_MESOS_MASTER = "localhost:5050";
 const char *DEFAULT_WORKQUEUE_DOCKER = "alisw/slc6-builder";
@@ -37,6 +50,7 @@ static struct option options[] = {
   { "master", required_argument, NULL, 'm' },
   { "catalog", required_argument, NULL, 'C' },
   { "docker", required_argument, NULL, 'D' },
+  { "volume", required_argument, NULL, 'v' },
   { NULL, 0, NULL, 0 }
 };
 
@@ -47,6 +61,7 @@ int main(int argc, char **argv) {
   std::string catalog = defaultCatalog ? defaultCatalog : DEFAULT_WORKQUEUE_MESOS_CATALOG;
   std::string master = defaultMaster ? defaultMaster : DEFAULT_WORKQUEUE_MESOS_MASTER;
   std::string docker = defaultDocker ? defaultDocker : DEFAULT_WORKQUEUE_DOCKER;
+  std::vector<WorkqueueVolumeInfo> volumes;
 
   while (true) {
     int option_index;
@@ -68,6 +83,19 @@ int main(int argc, char **argv) {
       case 'D':
         docker = optarg;
         break;
+      case 'v':
+      {
+        auto r = split(optarg, ":");
+        if (r.size() == 1)
+          r.push_back(r[0]);
+        if (r.size() != 2)
+        {
+          std::cerr << "Error while passing argument to option -v: " << optarg << std::endl; 
+          exit(1);
+        }
+        volumes.push_back(WorkqueueVolumeInfo{r[0], r[1]});
+      }
+        break;
       case '?':
         /* getopt_long already printed an error message. */
         break;
@@ -75,13 +103,13 @@ int main(int argc, char **argv) {
         abort ();
     }
   }
-  
+
   ExecutorInfo worker;
   worker.mutable_executor_id()->set_value("Worker");
   worker.set_name("Workqueue Worker Executor");
   worker.mutable_command()->set_shell(false);
 
-  WorkqueueScheduler scheduler(catalog, docker, worker);
+  WorkqueueScheduler scheduler(catalog, docker, volumes, worker);
 
   FrameworkInfo framework;
   framework.set_user(""); // Have Mesos fill in the current user.
