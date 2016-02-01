@@ -7,10 +7,16 @@ struct WorkqueueMasterInfo {
   std::string port;
 };
 
+struct WorkqueueVolumeInfo {
+  std::string host;
+  std::string container;
+};
+
 class WorkqueueScheduler : public mesos::Scheduler {
 public:
   WorkqueueScheduler(const std::string &catalog, 
                      const std::string &docker,
+                     const std::vector<WorkqueueVolumeInfo> &volumes,
                      const mesos::ExecutorInfo &executor);
 
   virtual void registered(mesos::SchedulerDriver* driver,
@@ -42,6 +48,7 @@ private:
   mesos::MasterInfo master_;
   std::string catalog_;
   std::string docker_;
+  std::vector<WorkqueueVolumeInfo> volumes_;
   mesos::ExecutorInfo workerInfo_;
   size_t      workqueueMasterIdx_;
   std::vector<WorkqueueMasterInfo> workqueueMasterInfos_;

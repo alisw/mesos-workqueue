@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <sstream>
 #include <istream>
+#include <string>
+#include <vector>
+#include <regex>
 
 using namespace mesos;
 std::string catalogString;
@@ -29,9 +32,11 @@ size_t readToStream(void *p, size_t size, size_t nmemb, void *userdata) {
 
 WorkqueueScheduler::WorkqueueScheduler(const std::string &catalog,
                                        const std::string &docker,
+                                       const std::vector<WorkqueueVolumeInfo> &volumes,
                                        const ExecutorInfo &executor)
 : catalog_(catalog),
   docker_(docker),
+  volumes_(volumes),
   workerInfo_(executor),
   workqueueMasterIdx_(0) 
 {
@@ -126,6 +131,13 @@ WorkqueueScheduler::resourceOffers(SchedulerDriver* driver,
     ContainerInfo::DockerInfo dockerInfo;
     dockerInfo.set_image(docker_);
     container.mutable_docker()->CopyFrom(dockerInfo);
+
+    for (auto &&v : volumes_)
+    {
+      Volume *volume = container.add_volumes();
+      volume->set_host_path(v.host);
+      volume->set_container_path(v.container);
+    }
 
     CommandInfo command;
     command.set_value("work_queue_worker -t 20 -C " + catalog_ +  " -N '.*'");
