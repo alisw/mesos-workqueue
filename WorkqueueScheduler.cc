@@ -157,7 +157,7 @@ WorkqueueScheduler::resourceOffers(SchedulerDriver* driver,
     }
 
     CommandInfo command;
-    command.set_value("work_queue_worker -t 20 -C " + catalog_ +  " -N '.*'");
+    command.set_value("work_queue_worker --workdir /mnt/mesos/sandbox --single-shot --debug -t 20 -C " + catalog_ +  " -N '.*'");
     // Launch as many workers as there are pending tasks.
     std::vector<TaskInfo> tasks;
     size_t toBeScheduled = std::min(tasksWaiting_, maxTasks);
