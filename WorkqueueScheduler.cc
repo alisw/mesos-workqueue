@@ -137,6 +137,7 @@ WorkqueueScheduler::resourceOffers(SchedulerDriver* driver,
       Volume *volume = container.add_volumes();
       volume->set_host_path(v.host);
       volume->set_container_path(v.container);
+      volume->set_mode(v.readOnly ? Volume::RO : Volume::RW);
     }
 
     CommandInfo command;

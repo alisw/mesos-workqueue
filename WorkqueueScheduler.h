@@ -10,6 +10,7 @@ struct WorkqueueMasterInfo {
 struct WorkqueueVolumeInfo {
   std::string host;
   std::string container;
+  bool readOnly;
 };
 
 class WorkqueueScheduler : public mesos::Scheduler {
