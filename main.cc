@@ -88,12 +88,15 @@ int main(int argc, char **argv) {
         auto r = split(optarg, ":");
         if (r.size() == 1)
           r.push_back(r[0]);
-        if (r.size() != 2)
+        if (r.size() == 2)
+          r.push_back("RW");
+
+        if (r.size() != 3)
         {
           std::cerr << "Error while passing argument to option -v: " << optarg << std::endl; 
           exit(1);
         }
-        volumes.push_back(WorkqueueVolumeInfo{r[0], r[1]});
+        volumes.push_back(WorkqueueVolumeInfo{r[0], r[1], r[2] == "RO"});
       }
         break;
       case '?':
