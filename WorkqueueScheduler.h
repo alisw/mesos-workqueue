@@ -45,12 +45,15 @@ public:
   virtual void error(mesos::SchedulerDriver* driver,
                      const std::string& message);
 private:
-  mesos::FrameworkID id_;
-  mesos::MasterInfo master_;
-  std::string catalog_;
-  std::string docker_;
-  std::vector<WorkqueueVolumeInfo> volumes_;
-  mesos::ExecutorInfo workerInfo_;
-  size_t      workqueueMasterIdx_;
-  std::vector<WorkqueueMasterInfo> workqueueMasterInfos_;
+  mesos::FrameworkID                 id_;
+  mesos::MasterInfo                  master_;
+  std::string                        catalog_;
+  std::string                        docker_;
+  std::vector<WorkqueueVolumeInfo>   volumes_;
+  mesos::ExecutorInfo                workerInfo_;
+  size_t                             workqueueMasterIdx_;
+  std::vector<WorkqueueMasterInfo>   workqueueMasterInfos_;
+  std::chrono::system_clock::time_point  lastUpdate_;
+  size_t                                 tasksWaiting_ = 0;
+  size_t                                 tasksRunning_ = 0;
 };

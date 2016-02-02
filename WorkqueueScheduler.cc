@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 #include <regex>
+#include <chrono>
 
 using namespace mesos;
 std::string catalogString;
@@ -70,46 +71,61 @@ void
 WorkqueueScheduler::resourceOffers(SchedulerDriver* driver,
                                    const std::vector<Offer>& offers)
 {
-  sleep(10);
-  // 1) Update the masters list
-  CURL *curl;
-  curl = curl_easy_init();
-  size_t tasksWaiting = 0;
+  auto now = std::chrono::system_clock::now();
 
-  if (!curl) {
-    std::cerr << "Unable to perform curl." << std::endl;
-    return;
-  }
-  std::stringstream buffer;
-  CURLcode res;
-  std::cerr << "http://" + catalog_ + "/query.text" << std::endl;
-  curl_easy_setopt(curl, CURLOPT_URL, ("http://" + catalog_ + "/query.text").c_str());
-  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
-  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readToStream);
-  res = curl_easy_perform(curl);
-  curl_easy_cleanup(curl);
-  if (res != CURLE_OK) {
-    std::cerr << "Server not responding." << std::endl;
-    return;
-  }
-  std::string key;
-  std::string value;
-  buffer.seekg(std::ios_base::beg);
+  // We check the workqueue scheduler only if there is no tasks running
+  // reported by the previous check or once every 60 seconds to give it
+  // enough time to update the tasks_waiting information.
+  // This should allow us to guess the actual state of the cluster even
+  // if the scheduler is updated only once every 60 seconds and yet to have 
+  if (tasksRunning_ == 0
+      || (now - lastUpdate_) > std::chrono::seconds(60)) {
+    // 1) Update the masters list
+    CURL *curl;
+    curl = curl_easy_init();
 
-  std::string line;
-  while (std::getline(buffer, line, '\n')) {
-    std::stringstream ss(line);
-    std::string token;
-    while (std::getline(ss, token, ' ')) {
-      if (token == "tasks_waiting")
-      {
-        std::getline(ss, token, ' ');
-        tasksWaiting += atoi(token.c_str());
-      }
+    if (!curl) {
+      std::cerr << "Unable to perform curl." << std::endl;
+      return;
     }
-  }
+    std::stringstream buffer;
+    CURLcode res;
+    std::cerr << "http://" + catalog_ + "/query.text" << std::endl;
+    curl_easy_setopt(curl, CURLOPT_URL, ("http://" + catalog_ + "/query.text").c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, readToStream);
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    if (res != CURLE_OK) {
+      std::cerr << "Server not responding." << std::endl;
+      return;
+    }
+    std::string key;
+    std::string value;
+    buffer.seekg(std::ios_base::beg);
 
-  std::cerr << tasksWaiting << std::endl;
+    std::string line;
+    while (std::getline(buffer, line, '\n')) {
+      std::stringstream ss(line);
+      std::string token;
+      while (std::getline(ss, token, ' ')) {
+        if (token == "tasks_waiting")
+        {
+          std::getline(ss, token, ' ');
+          tasksWaiting_ = atoi(token.c_str());
+        }
+        if (token == "task_running")
+        {
+          std::getline(ss, token, ' ');
+          tasksRunning_ = atoi(token.c_str());
+        }
+      }
+      lastUpdate_ = std::chrono::system_clock::now();
+    }
+
+    std::cerr << tasksWaiting_ << std::endl;
+
+  }
 
   for (size_t i = 0; i < offers.size(); i++) {
     const Offer& offer = offers[i];
@@ -144,7 +160,8 @@ WorkqueueScheduler::resourceOffers(SchedulerDriver* driver,
     command.set_value("work_queue_worker -t 20 -C " + catalog_ +  " -N '.*'");
     // Launch as many workers as there are pending tasks.
     std::vector<TaskInfo> tasks;
-    for (size_t i = 0; i < std::min(tasksWaiting, maxTasks); i++) {
+    size_t toBeScheduled = std::min(tasksWaiting_, maxTasks);
+    for (size_t i = 0; i < toBeScheduled ; i++) {
       TaskInfo task;
       task.set_name("Workqueue worker " + stringify<size_t>(workqueueMasterIdx_));
       task.mutable_task_id()->set_value(stringify<size_t>(workqueueMasterIdx_));
@@ -154,6 +171,8 @@ WorkqueueScheduler::resourceOffers(SchedulerDriver* driver,
       task.mutable_resources()->MergeFrom(TASK_RESOURCES);
       tasks.push_back(task);
       workqueueMasterIdx_++;
+      tasksWaiting_--;
+      tasksRunning_++;
     }
 
     driver->launchTasks(offer.id(), tasks);
