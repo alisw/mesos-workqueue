@@ -34,12 +34,16 @@ size_t readToStream(void *p, size_t size, size_t nmemb, void *userdata) {
 WorkqueueScheduler::WorkqueueScheduler(const std::string &catalog,
                                        const std::string &docker,
                                        const std::vector<WorkqueueVolumeInfo> &volumes,
-                                       const ExecutorInfo &executor)
+                                       const ExecutorInfo &executor,
+                                       int cores,
+                                       int memory)
 : catalog_(catalog),
   docker_(docker),
   volumes_(volumes),
   workerInfo_(executor),
-  workqueueMasterIdx_(0) 
+  workqueueMasterIdx_(0),
+  cores_(cores),
+  memory_(memory)
 {
 }
 
@@ -57,9 +61,6 @@ WorkqueueScheduler::reregistered(SchedulerDriver*, const MasterInfo& masterInfo)
 void
 WorkqueueScheduler::disconnected(SchedulerDriver* driver) {
 }
-
-const float CPUS_PER_TASK = 1.0;
-const int32_t MEM_PER_TASK = 1024;
 
 // This is the method which does the actual heavy lifting:
 //
@@ -132,8 +133,8 @@ WorkqueueScheduler::resourceOffers(SchedulerDriver* driver,
     Resources remaining = offer.resources();
 
     static Resources TASK_RESOURCES = Resources::parse(
-        "cpus:" + stringify<float>(CPUS_PER_TASK) +
-        ";mem:" + stringify<size_t>(MEM_PER_TASK)).get();
+        "cpus:" + stringify<float>(cores_) +
+        ";mem:" + stringify<size_t>(memory_)).get();
 
     size_t maxTasks = 0;
     while (remaining.flatten().contains(TASK_RESOURCES)) {

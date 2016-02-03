@@ -18,7 +18,9 @@ public:
   WorkqueueScheduler(const std::string &catalog, 
                      const std::string &docker,
                      const std::vector<WorkqueueVolumeInfo> &volumes,
-                     const mesos::ExecutorInfo &executor);
+                     const mesos::ExecutorInfo &executor,
+                     int cores,
+                     int memory);
 
   virtual void registered(mesos::SchedulerDriver* driver,
                           const mesos::FrameworkID& frameworkId,
@@ -56,4 +58,6 @@ private:
   std::chrono::system_clock::time_point  lastUpdate_;
   size_t                                 tasksWaiting_ = 0;
   size_t                                 tasksRunning_ = 0;
+  int                                    cores_;
+  int                                    memory_;
 };
