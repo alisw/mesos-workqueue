@@ -1,6 +1,6 @@
 ### About
 
-This is an example [Mesos](https://github.com/apache/mesos)
+This is an example [Mesos](https://mesos.apache.org)
 Framework which allows spawning of
 [Workqueue](http://ccl.cse.nd.edu/software/workqueue/) workers on demand
 on a Mesos cluster, running them in a docker engine an pulling work from
@@ -50,3 +50,24 @@ You can start the framework by running:
     mesos-workqueue-framework                     \
        --master $(docker-machine ip default):5050 \
        --catalog $(docker-machine ip default):9097
+
+### Configuration
+
+A number of configuration options can be passed to the command line:
+
+- `--catalog <host>:<port>`: the workqueue catalog to be used. Can also use
+  WORKQUEUE_MESOS_CATALOG environment variable.
+- `--master <host>:<port>`: the Mesos master to connect to. Can also use
+  WORKQUEUE_MESOS_MASTER environment variable.
+- `--docker <image>`: the docker image to be used by the workqueue workers. Can
+  also use the WO
+- `--cores <n of cores>`: the maximum number of cores to be used by the
+  workqueue workers.
+- `--memory <n of MB>`: the maximum amount of memory to be used by the
+  workqueue workers.
+- `--volume <host path>:[<container-path>[:RO]]`: a volume to be mounted inside
+  the docker volume where the workqueue worker runs.
+
+notice you can also pass them via environment variables which are called
+like the capitalized option, prefixed by `WORKQUEUE_MESOS_`. E.g. in
+place of `--catalog` you can use `WORKQUEUE_MESOS_CATALOG`.
