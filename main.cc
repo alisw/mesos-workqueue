@@ -48,6 +48,7 @@ const char *DEFAULT_WORKQUEUE_MESOS_MASTER = "localhost:5050";
 const char *DEFAULT_WORKQUEUE_DOCKER = "alisw/slc6-builder";
 const char *DEFAULT_WORKQUEUE_CORES = "1";
 const char *DEFAULT_WORKQUEUE_MEMORY = "1024";
+const char *DEFAULT_WORKQUEUE_PRIVILEGED = "false";
 
 static struct option options[] = {
   { "help", no_argument, NULL, 'h' },
@@ -57,6 +58,7 @@ static struct option options[] = {
   { "volume", required_argument, NULL, 'v' },
   { "memory", required_argument, NULL, 'M' },
   { "cores", required_argument, NULL, 'c' },
+  { "privileged", no_argument, NULL, 'p' },
   { NULL, 0, NULL, 0 }
 };
 
@@ -72,17 +74,19 @@ int main(int argc, char **argv) {
   const char *defaultDocker = getenv("WORKQUEUE_MESOS_DOCKER");
   const char *defaultCores = getenv("WORKQUEUE_MESOS_CORES");
   const char *defaultMemory = getenv("WORKQUEUE_MESOS_MEMORY");
+  const char *defaultPrivileged = getenv("WORKQUEUE_MESOS_PRIVILEGED");
 
   std::string catalog = defaultCatalog ? defaultCatalog : DEFAULT_WORKQUEUE_MESOS_CATALOG;
   std::string master = defaultMaster ? defaultMaster : DEFAULT_WORKQUEUE_MESOS_MASTER;
   std::string docker = defaultDocker ? defaultDocker : DEFAULT_WORKQUEUE_DOCKER;
   std::string cores = defaultCores ? defaultCores : DEFAULT_WORKQUEUE_CORES;
   std::string memory = defaultMemory ? defaultMemory : DEFAULT_WORKQUEUE_MEMORY;
+  std::string privileged = defaultPrivileged ? defaultPrivileged : DEFAULT_WORKQUEUE_PRIVILEGED;
   std::vector<WorkqueueVolumeInfo> volumes;
 
   while (true) {
     int option_index;
-    int c = getopt_long(argc, argv, "hm:C:D:c:M:", options, &option_index);
+    int c = getopt_long(argc, argv, "hpm:C:D:c:M:", options, &option_index);
      
     if (c == -1)
       break;
@@ -122,6 +126,9 @@ int main(int argc, char **argv) {
       case 'M':
         memory = optarg;
         break;
+      case 'p':
+        privileged = "true";
+        break;
       case '?':
         /* getopt_long already printed an error message. */
         break;
@@ -140,12 +147,14 @@ int main(int argc, char **argv) {
   if (*err != 0)
     die("Error while parsing -M / --memory.");
 
+  bool privilegedOpt = (privileged == "true");
+
   ExecutorInfo worker;
   worker.mutable_executor_id()->set_value("Worker");
   worker.set_name("Workqueue Worker Executor");
   worker.mutable_command()->set_shell(false);
 
-  WorkqueueScheduler scheduler(catalog, docker, volumes, worker, coresCount, memoryCount);
+  WorkqueueScheduler scheduler(catalog, docker, volumes, worker, coresCount, memoryCount, privilegedOpt);
 
   FrameworkInfo framework;
   framework.set_user(""); // Have Mesos fill in the current user.

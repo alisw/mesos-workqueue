@@ -36,14 +36,16 @@ WorkqueueScheduler::WorkqueueScheduler(const std::string &catalog,
                                        const std::vector<WorkqueueVolumeInfo> &volumes,
                                        const ExecutorInfo &executor,
                                        int cores,
-                                       int memory)
+                                       int memory,
+                                       bool privileged)
 : catalog_(catalog),
   docker_(docker),
   volumes_(volumes),
   workerInfo_(executor),
   workqueueMasterIdx_(0),
   cores_(cores),
-  memory_(memory)
+  memory_(memory),
+  privileged_(privileged)
 {
 }
 
@@ -147,6 +149,7 @@ WorkqueueScheduler::resourceOffers(SchedulerDriver* driver,
 
     ContainerInfo::DockerInfo dockerInfo;
     dockerInfo.set_image(docker_);
+    dockerInfo.set_privileged(privileged_);
     container.mutable_docker()->CopyFrom(dockerInfo);
 
     for (auto &&v : volumes_)

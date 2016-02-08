@@ -67,6 +67,7 @@ A number of configuration options can be passed to the command line:
   workqueue workers.
 - `--volume <host path>:[<container-path>[:RO]]`: a volume to be mounted inside
   the docker volume where the workqueue worker runs.
+- `--privileged`: run the slaves in a privileged docker container.
 
 notice you can also pass them via environment variables which are called
 like the capitalized option, prefixed by `WORKQUEUE_MESOS_`. E.g. in

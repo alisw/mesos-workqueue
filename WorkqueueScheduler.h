@@ -20,7 +20,8 @@ public:
                      const std::vector<WorkqueueVolumeInfo> &volumes,
                      const mesos::ExecutorInfo &executor,
                      int cores,
-                     int memory);
+                     int memory,
+                     bool privileged);
 
   virtual void registered(mesos::SchedulerDriver* driver,
                           const mesos::FrameworkID& frameworkId,
@@ -60,4 +61,5 @@ private:
   size_t                                 tasksRunning_ = 0;
   int                                    cores_;
   int                                    memory_;
+  bool                                   privileged_;
 };
