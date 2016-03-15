@@ -1,3 +1,6 @@
+#ifndef WORKQUEUESCHEDULER_H_
+#define WORKQUEUESCHEDULER_H_
+
 #include <mesos/scheduler.hpp>
 
 size_t updateTasksWaiting(void *ptr, size_t size, size_t nmemb, void *stream);
@@ -63,3 +66,5 @@ private:
   int                                    memory_;
   bool                                   privileged_;
 };
+
+#endif /* WORKQUEUESCHEDULER_H_ */
