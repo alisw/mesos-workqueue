@@ -1,0 +1,16 @@
+sudo: required
+dist: trusty
+services:
+  - docker
+cache:
+  directories:
+    - $HOME/sw/TARS
+before_install: |
+  sudo apt-get install -y curl
+  cd ..
+  curl -O -L https://ali-ci.cern.ch/TARS/ubt14_x86-64/store/4c/4cd3849d482fc5231c2d10f4b65d9fecff7f66e6/autotools-v1.4.0-2.ubt14_x86-64.tar.gz
+  git clone -b IB/v5-06/next https://github.com/alisw/alidist
+  git clone -b next https://github.com/alisw/alibuild
+script: |
+  ls
+  alibuild/aliBuild --insecure --docker -a slc7_x86-64 -d build mesos-workqueue --remote-store https://ali-ci.cern.ch
