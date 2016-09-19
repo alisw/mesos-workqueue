@@ -11,6 +11,10 @@ using namespace mesos;
 const char *USAGE = "Usage: workqueue-mesos-framework"          \
                     " --master <url>"                           \
                     " --docker <docker image>"                  \
+                    " [--user <user name>]"                     \
+                    " [--framework_name <framework name>]"      \
+                    " [--role <mesos role>]"                    \
+                    " [--principal <mesos principal>]"          \
                     " [--cores <number of cores>]"              \
                     " [--memory <MB>]"                          \
                     " [--volume <host path>:<container path>]"  \
@@ -46,6 +50,10 @@ std::vector<std::string> split(const std::string& input, const std::string& rege
 const char *DEFAULT_WORKQUEUE_MESOS_CATALOG = "localhost:9097";
 const char *DEFAULT_WORKQUEUE_MESOS_MASTER = "localhost:5050";
 const char *DEFAULT_WORKQUEUE_DOCKER = "alisw/slc6-builder";
+const char *DEFAULT_WORKQUEUE_USER = ""; // Have Mesos fill in the current user.
+const char *DEFAULT_WORKQUEUE_FRAMEWORK_NAME = "Mesos Workqueue Framework";
+const char *DEFAULT_WORKQUEUE_ROLE = "";
+const char *DEFAULT_WORKQUEUE_PRINCIPAL = "workqueue";
 const char *DEFAULT_WORKQUEUE_CORES = "1";
 const char *DEFAULT_WORKQUEUE_MEMORY = "1024";
 const char *DEFAULT_WORKQUEUE_PRIVILEGED = "false";
@@ -55,6 +63,10 @@ static struct option options[] = {
   { "master", required_argument, NULL, 'm' },
   { "catalog", required_argument, NULL, 'C' },
   { "docker", required_argument, NULL, 'D' },
+  { "user", required_argument, NULL, 'u' },
+  { "framework_name", required_argument, NULL, 'N' },
+  { "role", required_argument, NULL, 'r' },
+  { "principal", required_argument, NULL, 'P' },
   { "volume", required_argument, NULL, 'v' },
   { "memory", required_argument, NULL, 'M' },
   { "cores", required_argument, NULL, 'c' },
@@ -72,6 +84,10 @@ int main(int argc, char **argv) {
   const char *defaultCatalog = getenv("WORKQUEUE_MESOS_CATALOG");
   const char *defaultMaster = getenv("WORKQUEUE_MESOS_MASTER");
   const char *defaultDocker = getenv("WORKQUEUE_MESOS_DOCKER");
+  const char *defaultUser = getenv("WORKQUEUE_MESOS_USER");
+  const char *defaultFrameworkName = getenv("WORKQUEUE_MESOS_FRAMEWORK_NAME");
+  const char *defaultRole = getenv("WORKQUEUE_MESOS_ROLE");
+  const char *defaultPrincipal = getenv("WORKQUEUE_MESOS_PRINCIPAL");
   const char *defaultCores = getenv("WORKQUEUE_MESOS_CORES");
   const char *defaultMemory = getenv("WORKQUEUE_MESOS_MEMORY");
   const char *defaultPrivileged = getenv("WORKQUEUE_MESOS_PRIVILEGED");
@@ -79,6 +95,10 @@ int main(int argc, char **argv) {
   std::string catalog = defaultCatalog ? defaultCatalog : DEFAULT_WORKQUEUE_MESOS_CATALOG;
   std::string master = defaultMaster ? defaultMaster : DEFAULT_WORKQUEUE_MESOS_MASTER;
   std::string docker = defaultDocker ? defaultDocker : DEFAULT_WORKQUEUE_DOCKER;
+  std::string user = defaultUser ? defaultUser : DEFAULT_WORKQUEUE_USER;
+  std::string frameworkName = defaultFrameworkName ? defaultFrameworkName : DEFAULT_WORKQUEUE_FRAMEWORK_NAME;
+  std::string role = defaultRole ? defaultRole : DEFAULT_WORKQUEUE_ROLE;
+  std::string principal = defaultPrincipal ? defaultPrincipal : DEFAULT_WORKQUEUE_PRINCIPAL;
   std::string cores = defaultCores ? defaultCores : DEFAULT_WORKQUEUE_CORES;
   std::string memory = defaultMemory ? defaultMemory : DEFAULT_WORKQUEUE_MEMORY;
   std::string privileged = defaultPrivileged ? defaultPrivileged : DEFAULT_WORKQUEUE_PRIVILEGED;
@@ -86,8 +106,8 @@ int main(int argc, char **argv) {
 
   while (true) {
     int option_index;
-    int c = getopt_long(argc, argv, "hpm:C:D:c:M:", options, &option_index);
-     
+    int c = getopt_long(argc, argv, "hpm:C:D:u:N:r:P:c:M:", options, &option_index);
+
     if (c == -1)
       break;
     switch(c)
@@ -104,6 +124,18 @@ int main(int argc, char **argv) {
       case 'D':
         docker = optarg;
         break;
+      case 'u':
+        user = optarg;
+        break;
+      case 'N':
+        frameworkName = optarg;
+        break;
+      case 'r':
+        role = optarg;
+        break;
+      case 'P':
+        principal = optarg;
+        break;
       case 'v':
       {
         auto r = split(optarg, ":");
@@ -114,7 +146,7 @@ int main(int argc, char **argv) {
 
         if (r.size() != 3)
         {
-          std::cerr << "Error while passing argument to option -v: " << optarg << std::endl; 
+          std::cerr << "Error while passing argument to option -v: " << optarg << std::endl;
           exit(1);
         }
         volumes.push_back(WorkqueueVolumeInfo{r[0], r[1], r[2] == "RO"});
@@ -157,10 +189,11 @@ int main(int argc, char **argv) {
   WorkqueueScheduler scheduler(catalog, docker, volumes, worker, coresCount, memoryCount, privilegedOpt);
 
   FrameworkInfo framework;
-  framework.set_user(""); // Have Mesos fill in the current user.
-  framework.set_name("Mesos Workqueue Framework");
-  //framework.set_role(role);
-  framework.set_principal("workqueue");
+  framework.set_user(user);
+  framework.set_name(frameworkName);
+  framework.set_principal(principal);
+  if (!role.empty())
+    framework.set_role(role);
 
   // Set up the signal handler for SIGINT for clean shutdown.
   struct sigaction action;
